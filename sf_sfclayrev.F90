@@ -818,12 +818,14 @@
 !            znt(i)=0.011*ust(i)*ust(i)/g+ozo
 !            znt(i)=max(znt(i),3.50e-5)
 ! AHW 2012:
+! RRB 20230725: following recommendations from GB, changing these
+! parameters to match Fig 3 in Curcic and Haus (2000)
              zw  = min((ust(i)/1.06)**(0.3),1.0)
              zn1 = 0.011*ust(i)*ust(i)/g + ozo
-             zn2 = 10.*exp(-9.5*ust(i)**(-.3333)) + &
+             zn2 = 10.*exp(-8.6*ust(i)**(-.3333)) + &
                    0.11*1.5e-5/amax1(ust(i),0.01)
              znt(i)=(1.0-zw) * zn1 + zw * zn2
-             znt(i)=min(znt(i),2.85e-3)
+             znt(i)=min(znt(i),0.0067)
              znt(i)=max(znt(i),1.27e-7)
           endif
        endif
@@ -864,13 +866,15 @@
     390 continue                                                                 
     do 400 i = its,ite
        if(xland(i)-1.5.gt.0.)then                                           
-          hfx(i)=flhc(i)*(thgb(i)-thx(i)) 
-!         if(present(isftcflx)) then
-!            if(isftcflx.ne.0) then
+          hfx(i)=flhc(i)*(thgb(i)-thx(i))
+          ! -- lines below commented out by RRB to include diss. h. -- !
+          !if(present(isftcflx)) then
+          !   if(isftcflx.ne.0) then
 ! AHW: add dissipative heating term (commented out in 3.6.1)
-!               hfx(i)=hfx(i)+rhox(i)*ustm(i)*ustm(i)*wspdi(i)
-!            endif
-!         endif 
+          !      hfx(i)=hfx(i)+rhox(i)*ustm(i)*ustm(i)*wspdi(i)
+          !   endif
+          !endif
+          ! ---------------------------------------------------------- !
        elseif(xland(i)-1.5.lt.0.)then                                       
           hfx(i)=flhc(i)*(thgb(i)-thx(i))                                
 !         hfx(i)=amax1(hfx(i),-250.)                                       

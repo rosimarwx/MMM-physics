@@ -153,6 +153,8 @@
    integer,parameter ::  imvdif = 1
    real(kind=kind_phys),parameter    ::  rcl = 1.0
    integer,parameter ::  kts=1, kms=1
+   ! GHB, 230721: dissipative heating, ported by RRB from MPASv8.0.1
+   logical, parameter :: do_dissipative_heating = .true.
 !
    integer,  intent(in   )   ::     its,ite,kte,kme
 
@@ -373,6 +375,10 @@
 
    real(kind=kind_phys),     dimension( kts:kte  ) :: thvx_1d,tke_1d,dzq_1d
    real(kind=kind_phys),     dimension( kts:kte+1) :: zq_1d
+
+   real(kind=kind_phys),     dimension( its:ite, kts:kte+1) :: t13,t23,dten
+   real(kind=kind_phys),     dimension( its:ite, kts:kte)   :: dheat
+   real(kind=kind_phys),     dimension( its:ite )           :: stau
 
 !
 !-------------------------------------------------------------------------------
@@ -1319,6 +1325,8 @@
       endif
      f1(i,1) = ux(i,1)+uoxl(i)*ust(i)**2*rhox(i)*g/del(i,1)*dt2/wspd1(i)*(wspd1(i)/wspd(i))**2
      f2(i,1) = vx(i,1)+voxl(i)*ust(i)**2*rhox(i)*g/del(i,1)*dt2/wspd1(i)*(wspd1(i)/wspd(i))**2
+     ! GHB, 230723: save surface stress (as actually used in the code)
+     stau(i) = (ad(i,1)-1.0)/(rhox(i)*g/del(i,1)*dt2/wspd1(i))
    enddo
 !
    do k = kts,kte-1
@@ -1407,6 +1415,37 @@
        v10(i) = ctopo2(i)*v10(i)+(1-ctopo2(i))*vx(i,1)
      endif !mchen
    enddo
+
+  IF( do_dissipative_heating )THEN
+    ! GHB, 230721: Use bottom-up integration of tendencies to get stress
+    do i=its,ite
+      t13(i,1) = stau(i)*f1(i,1)/wspd1(i)
+      t23(i,1) = stau(i)*f2(i,1)/wspd1(i)
+      dten(i,1) = 0.0
+    enddo
+    do k=kts,kte-1
+    do i=its,ite
+      t13(i,k+1) = t13(i,k)+utnp(i,k)*dzq(i,k)
+      t23(i,k+1) = t23(i,k)+vtnp(i,k)*dzq(i,k)
+      dten(i,k+1) = -( t13(i,k+1)*(ux(i,k+1)-ux(i,k))/dza(i,k+1) &
+                      +t23(i,k+1)*(vx(i,k+1)-vx(i,k))/dza(i,k+1) )
+      ! note: dheat is potential temperature tendency:
+      dheat(i,k) = max( 0.0 , -0.5*(dten(i,k)+dten(i,k+1))/(cp*pi2d(i,k)) )
+    enddo
+    enddo
+    do i=its,ite
+      ! At lowest model level, use similarity theory for dissipation rate
+      ! (Businger and Businger, 2001, JAS, Eqn 5)
+      dheat(i,1) = (stau(i)**1.5)*alog(zq(i,2)/znt(i))/(karman*zq(i,2))  &
+                  /(cp*pi2d(i,1))
+    enddo
+    do k=kts,kte-1
+    do i=its,ite
+      ! convert to temperature tendency:
+      ttnp(i,k) = ttnp(i,k)+dheat(i,k)*pi2d(i,k)
+    enddo
+    enddo
+  ENDIF
 !
 !---- end of vertical diffusion
 !
