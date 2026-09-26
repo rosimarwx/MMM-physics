@@ -819,7 +819,7 @@
 !            znt(i)=max(znt(i),3.50e-5)
 ! AHW 2012:
 ! RRB 20230725: following recommendations from GB, changing these
-! parameters to match Fig 3 in Curcic and Haus (2000)
+! parameters to match Fig 3 in Curcic and Haus (2020)
              zw  = min((ust(i)/1.06)**(0.3),1.0)
              zn1 = 0.011*ust(i)*ust(i)/g + ozo
              zn2 = 10.*exp(-8.6*ust(i)**(-.3333)) + &
